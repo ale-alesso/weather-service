@@ -7,12 +7,13 @@ use Illuminate\Support\Facades\Log;
 
 class WeatherService
 {
-    protected $apiKey;
-    protected $apiUrl = 'https://api.openweathermap.org/data/2.5/weather';
+    protected string $apiKey;
+    protected string $apiUrl;
 
     public function __construct()
     {
         $this->apiKey = env('WEATHER_API_KEY');
+        $this->apiUrl = env('WEATHER_API_URL');
     }
 
     public function getWeatherData($city)
@@ -34,8 +35,8 @@ class WeatherService
 
     public function checkWeatherAnomalies($weatherData)
     {
-        $precipitationThreshold = 50; // mm of rain
-        $uvIndexThreshold = 7;        // UV index value
+        $precipitationThreshold = config('settings.precipitation_threshold');
+        $uvIndexThreshold = config('settings.uv_index_threshold');
 
         $precipitation = $weatherData['rain']['1h'] ?? 0;
         $uvIndex = $weatherData['uvi'] ?? 0;

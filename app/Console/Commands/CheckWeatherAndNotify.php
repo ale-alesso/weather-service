@@ -6,7 +6,6 @@ use Illuminate\Console\Command;
 use App\Services\WeatherService;
 use App\Models\User;
 use App\Notifications\WeatherAlertNotification;
-use Illuminate\Support\Facades\Log;
 
 class CheckWeatherAndNotify extends Command
 {

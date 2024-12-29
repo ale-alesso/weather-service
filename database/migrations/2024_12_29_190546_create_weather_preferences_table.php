@@ -11,8 +11,6 @@ return new class extends Migration
      */
     public function up(): void
     {
-        public function up()
-    {
         Schema::create('weather_preferences', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
@@ -20,7 +18,6 @@ return new class extends Migration
             $table->boolean('receive_uv_alerts')->default(true);
             $table->timestamps();
         });
-    }
     }
 
     /**

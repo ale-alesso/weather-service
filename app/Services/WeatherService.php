@@ -2,8 +2,9 @@
 
 namespace App\Services;
 
+use App\Models\User;
+use App\Notifications\WeatherAlertNotification;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 
 class WeatherService
 {
@@ -16,34 +17,48 @@ class WeatherService
         $this->apiUrl = env('WEATHER_API_URL');
     }
 
-    public function getWeatherData($city)
+    /**
+     * Check weather conditions and notify users if anomalies are detected.
+     *
+     * @param string $city
+     * @return void
+     */
+    public function checkWeatherAndNotify($city)
     {
-        $response = Http::get($this->apiUrl, [
-            'q' => $city,
-            'appid' => $this->apiKey,
-            'units' => 'metric',
-        ]);
+        $weatherData = $this->fetchWeatherData($city);
 
-        if ($response->successful()) {
-            return $response->json();
-        }
-
-        Log::error('Failed to fetch weather data', ['city' => $city]);
-
-        return null;
-    }
-
-    public function checkWeatherAnomalies($weatherData)
-    {
         $precipitationThreshold = config('settings.precipitation_threshold');
         $uvIndexThreshold = config('settings.uv_index_threshold');
 
-        $precipitation = $weatherData['rain']['1h'] ?? 0;
-        $uvIndex = $weatherData['uvi'] ?? 0;
+        if ($weatherData['precipitation'] > $precipitationThreshold || $weatherData['uv_index'] > $uvIndexThreshold) {
+            $users = User::all();
+
+            foreach ($users as $user) {
+                $user->notify(new WeatherAlertNotification($weatherData));
+            }
+        }
+    }
+
+    /**
+     * Fetch weather data from an external weather API.
+     *
+     * @param string $city
+     * @return array
+     */
+    private function fetchWeatherData($city)
+    {
+        // Example API call to fetch weather data (replace with actual API service)
+        $response = Http::get($this->apiUrl, [
+            'key' => $this->apiKey,
+            'q' => $city,
+        ]);
+
+        $data = $response->json();
 
         return [
-            'precipitation' => $precipitation >= $precipitationThreshold,
-            'uv_index' => $uvIndex >= $uvIndexThreshold,
+            'condition' => $data['current']['condition']['text'] ?? 'Unknown',
+            'precipitation' => $data['current']['precip_mm'] ?? 0,
+            'uv_index' => $data['current']['uv'] ?? 0,
         ];
     }
 }

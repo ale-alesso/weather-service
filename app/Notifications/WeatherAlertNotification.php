@@ -2,59 +2,48 @@
 
 namespace App\Notifications;
 
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
 use Illuminate\Notifications\Messages\MailMessage;
-use Illuminate\Notifications\Messages\SMSMessage;
+use App\Channels\TwilioSmsChannel;
 
 class WeatherAlertNotification extends Notification
 {
-    use Queueable;
+    protected array $weatherData;
 
-    public $anomalies;
-
-    public function __construct($anomalies)
+    public function __construct(array $weatherData)
     {
-        $this->anomalies = $anomalies;
+        $this->weatherData = $weatherData;
     }
 
-    public function via($notifiable)
+    public function via(): array
     {
-        return ['mail', 'nexmo']; // Add Nexmo (SMS) as a channel
+        return ['mail', TwilioSmsChannel::class];
     }
 
-    public function toMail($notifiable)
+    /**
+     * Build the mail message.
+     *
+     * @return MailMessage
+     */
+    public function toMail(): MailMessage
     {
-        $message = 'Weather Alert: ';
-
-        if ($this->anomalies['precipitation']) {
-            $message .= 'High precipitation detected. ';
-        }
-
-        if ($this->anomalies['uv_index']) {
-            $message .= 'High UV index detected.';
-        }
-
         return (new MailMessage)
-            ->line($message)
-            ->action('Check Weather', url('/'))
-            ->line('Stay safe!');
+            ->subject('Weather Alert: Anomaly Detected!')
+            ->line('We have detected an anomaly in the weather conditions:')
+            ->line('Precipitation: ' . $this->weatherData['precipitation'] . ' mm')
+            ->line('UV Index: ' . $this->weatherData['uv_index'])
+            ->line('Please take necessary precautions.')
+            ->action('View More Details', url('/weather/details'))
+            ->line('Thank you for using our weather service!');
     }
 
-    public function toNexmo($notifiable)
+    /**
+     * Build the SMS message.
+     *
+     * @return string
+     */
+    public function toTwilioSms(): string
     {
-        $message = 'Weather Alert: ';
-
-        if ($this->anomalies['precipitation']) {
-            $message .= 'High precipitation detected. ';
-        }
-
-        if ($this->anomalies['uv_index']) {
-            $message .= 'High UV index detected.';
-        }
-
-        return (new SMSMessage)
-            ->content($message);
+        return 'Weather Alert: High precipitation (' . $this->weatherData['precipitation'] . ' mm) or UV Index (' . $this->weatherData['uv_index'] . ') detected. Take necessary precautions.';
     }
 }
